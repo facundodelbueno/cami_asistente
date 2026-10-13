@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: cami-assistant
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run render-build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: APP_TIMEZONE
+        value: America/Argentina/Buenos_Aires
+      - key: PAYMENT_REMINDER_RUN_HOUR
+        value: "9"
+      - key: CANCELLATION_POLICY_HOURS
+        value: "24"

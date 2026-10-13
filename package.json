@@ -1,0 +1,48 @@
+{
+  "name": "cami-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "npm run build && node dist/src/server.js",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/server.js",
+    "render-build": "npm run prisma:generate && npm run build",
+    "simulate": "npm run build && node dist/src/simulate.js",
+    "job:payment-reminders": "npm run build && node dist/src/jobs/run-payment-reminders.js",
+    "job:session-reminders": "npm run build && node dist/src/jobs/run-session-reminders.js",
+    "test": "vitest run",
+    "db:apply-initial": "npm run build && node dist/prisma/apply-initial-migration.js",
+    "db:apply-migration": "npm run build && node dist/prisma/apply-migration.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "npm run build && node dist/prisma/seed.js"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^6.16.3",
+    "@prisma/client": "^6.16.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "morgan": "^1.10.1",
+    "pg": "^8.23.1",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.5.2",
+    "@types/pg": "^8.23.1",
+    "prisma": "^6.16.3",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.3",
+    "vitest": "5.0.3"
+  },
+  "prisma": {
+    "seed": "npm run build && node dist/prisma/seed.js"
+  }
+}

@@ -1,0 +1,161 @@
+generator client {
+  provider        = "prisma-client-js"
+  engineType      = "client"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum SessionStatus {
+  SCHEDULED
+  PAYMENT_PENDING
+  PAYMENT_PROOF_RECEIVED
+  PAID
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentProofStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CancellationRequestStatus {
+  PENDING
+  CHARGE_CONFIRMED
+  RESCHEDULE_EXCEPTION
+  MANUAL_RESPONSE
+  CANCELLED_ALLOWED
+}
+
+model Client {
+  id                     String         @id @default(uuid()) @db.Uuid
+  firstName              String
+  lastName               String
+  phone                  String         @unique
+  email                  String?
+  defaultSessionPrice    Int
+  defaultSessionDuration Int            @default(60)
+  active                 Boolean        @default(true)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  sessions               Session[]
+  notes                  SessionNote[]
+  paymentProofs          PaymentProof[]
+  messageLogs            MessageLog[]
+  cancellationRequests    CancellationRequest[]
+
+  @@index([firstName, lastName])
+}
+
+model Session {
+  id                         String         @id @default(uuid()) @db.Uuid
+  clientId                   String         @db.Uuid
+  scheduledAt                DateTime
+  durationMinutes            Int            @default(60)
+  price                      Int
+  status                     SessionStatus  @default(PAYMENT_PENDING)
+  paymentReminderSentAt      DateTime?
+  paymentConfirmedAt         DateTime?
+  googleEventId              String?
+  meetUrl                    String?
+  sessionReminderSentAt      DateTime?
+  postSessionReminderSentAt  DateTime?
+  preSessionSummarySentAt    DateTime?
+  createdAt                  DateTime       @default(now())
+  updatedAt                  DateTime       @updatedAt
+  client                     Client         @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  notes                      SessionNote[]
+  paymentProofs              PaymentProof[]
+  messageLogs                MessageLog[]
+  cancellationRequests       CancellationRequest[]
+
+  @@index([clientId, scheduledAt])
+  @@index([status, scheduledAt])
+}
+
+model SessionNote {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @db.Uuid
+  clientId  String   @db.Uuid
+  rawText   String
+  aiSummary String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  @@index([clientId, createdAt])
+}
+
+model PaymentProof {
+  id          String             @id @default(uuid()) @db.Uuid
+  sessionId   String             @db.Uuid
+  clientId    String             @db.Uuid
+  storagePath String
+  mimeType    String
+  receivedAt  DateTime           @default(now())
+  status      PaymentProofStatus @default(PENDING)
+  session     Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  client      Client             @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  @@index([sessionId, status])
+}
+
+model MessageLog {
+  id                String           @id @default(uuid()) @db.Uuid
+  direction         MessageDirection
+  phone             String
+  clientId          String?          @db.Uuid
+  sessionId         String?          @db.Uuid
+  providerMessageId String?          @unique
+  messageType       String
+  status            String
+  createdAt         DateTime         @default(now())
+  client            Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  session           Session?         @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([phone, createdAt])
+}
+
+model CancellationRequest {
+  id                       String                    @id @default(uuid()) @db.Uuid
+  sessionId                String                    @db.Uuid
+  clientId                 String                    @db.Uuid
+  clientMessage            String
+  hoursBeforeSession       Float
+  withinCancellationWindow Boolean
+  status                   CancellationRequestStatus @default(PENDING)
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  resolvedAt               DateTime?
+  session                  Session                   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  client                   Client                    @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  @@index([status, createdAt])
+  @@index([clientId, createdAt])
+  @@index([sessionId])
+}
+
+model ConversationState {
+  id        String   @id @default(uuid()) @db.Uuid
+  phone     String   @unique
+  context   String
+  state     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([context, updatedAt])
+}
